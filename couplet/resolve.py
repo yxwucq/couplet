@@ -339,7 +339,7 @@ def compute_base_mod_tag(genomic_seq, epigenomic_seq, modifications):
     # Loop over modifications
     for key, values in modifications.items():
 
-        # Example: mod = { "P": ["C", "mh"] }
+        # Example: mod = { "P": ["C", "m"] }
         epi_context = key
         gen_base = values[0]
         SAM_code = values[1]

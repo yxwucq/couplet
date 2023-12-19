@@ -179,7 +179,7 @@ def main():
         sys.exit()
 
     # Check Python version is above 3.9.0
-    check_python_version([3, 9, 0])
+    check_python_version([3, 8, 0])
 
     # Setup logging
     log_output_file = get_base_name(args) + "_couplet.log"
@@ -230,6 +230,7 @@ def main():
             end_gap_penalty=args.end_gap_penalty,
         )
     elif args.rule == "6bp":
+        print("using 6bp rule")
         rule = ResolutionRule(
             six_bp_rule,
             six_bp_error_codes,
@@ -275,8 +276,10 @@ def main():
             read_stats["num_reads"] = 1
             stats = update_stats(stats, read_stats)
             if result is not None:
+                # print(f"writing to {resolved_handle}")
                 SeqIO.write(result, resolved_handle, "fastq")
             else:
+                # print(f"writing to {out_discard_file1F}")
                 SeqIO.write(r1, out_discard_file1F, "fastq")
                 SeqIO.write(r2, out_discard_file2F, "fastq")
 

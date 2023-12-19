@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+dist/
+eggs/
+*.egg-info/
+
+# PyInstaller
+__pycache__/
+*.pyc
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# vscode
+.vscode/
+
+# pyenv
+.python-version
+
+# pycodestyle
+.tox/
+
+# pycodestyle
+.pycodestyle
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
