@@ -7,6 +7,9 @@ Usage: python run_couplet.py  --fq1=TEST_R1.fq.gz  --fq2=TEST_R2.fq.gz --mismatc
 
 """
 
+import subprocess
+import copy
+import multiprocessing
 import argparse
 import logging
 import re
@@ -45,10 +48,10 @@ from couplet.rules import (
     ResolutionRule,
 )
 from couplet.core import resolve_read_pair, update_stats
+from couplet.split_fastq_file import split_fastq_file, merge_fastq_files, shell_split_fastq_file, shell_merge_fastq_files
+from couplet.postprocess_stats import postprocess_stats
 
-
-def main():
-
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -59,6 +62,17 @@ def main():
     parser.add_argument(
         "--fq2",
         help="reverse read names",
+    )
+    parser.add_argument(
+        "--out_dir",
+        help="output directory",
+        default=".",
+    )
+    parser.add_argument(
+        "--num_cores",
+        help="Number of cores to use",
+        default=4,
+        type=int,
     )
 
     parser.add_argument(
@@ -177,15 +191,76 @@ def main():
         # display help message when no args are passed.
         parser.print_help()
         sys.exit()
+    
+    if not args.fq1.endswith('_R1.fq.gz'):
+        raise ValueError("fq1 file name should end with _R1.fq.gz")
+    if not args.fq2.endswith('_R2.fq.gz'):
+        raise ValueError("fq2 file name should end with _R2.fq.gz")
+    
+    return args
 
+def main():
+    global_args = parse_args()
     # Check Python version is above 3.9.0
     check_python_version([3, 8, 0])
+    
+    logging.info("Splitting fastq files to " + str(global_args.num_cores*2) + " parts")
+    
+    split_fastq_R1 = shell_split_fastq_file(global_args.fq1)
+    split_fastq_R2 = shell_split_fastq_file(global_args.fq2)
+    print(split_fastq_R1)
+    print(split_fastq_R2)
+    assert len(split_fastq_R1) == len(split_fastq_R2)
+    split_file_length = len(split_fastq_R1)
+    
+    # Run couplet on each split file
+    pool = multiprocessing.Pool(processes=global_args.num_cores)
+    arg_list = []
+    for i in range(1, split_file_length+1):
+        local_args = copy.deepcopy(global_args) # should not contain list or dict
+        local_args.fq1 = global_args.fq1.replace('_R1.fq.gz', f"_SPLIT_{i}_R1.fq.gz")
+        local_args.fq2 = global_args.fq2.replace('_R2.fq.gz', f"_SPLIT_{i}_R2.fq.gz")
+        print("Pushing " + local_args.fq1 + " and " + local_args.fq2)
+        arg_list.append(local_args)
+    
+    print(len(arg_list))
+    pool.map(run_couplet, arg_list)
+    
+    pool.close()
+    pool.join()
+    
+    resolve_file_list = [global_args.fq1.replace('_R1.fq.gz', f"_SPLIT_{i}_resolved.fq.gz") for i in range(1, split_file_length+1)]
+    discard_r1_list = [global_args.fq1.replace('_R1.fq.gz', f"_SPLIT_{i}_discarded_R1.fq.gz") for i in range(1, split_file_length+1)]
+    discard_r2_list = [global_args.fq1.replace('_R1.fq.gz', f"_SPLIT_{i}_discarded_R2.fq.gz") for i in range(1, split_file_length+1)]
+    
+    for file_list in [resolve_file_list, discard_r1_list, discard_r2_list]:
+        for file in file_list:
+            if not os.path.exists(file):
+                file_list.remove(file)
+        if len(file_list) == 0:
+            raise ValueError("No files in " + str(file_list))
+    
+    for file_list in [resolve_file_list, discard_r1_list, discard_r2_list]:
+        shell_merge_fastq_files(file_list, os.path.join(global_args.out_dir, file_list[0].split('/')[-1].replace('_SPLIT_1_', '_')))
 
+    for temp_file in resolve_file_list + discard_r1_list + discard_r2_list:
+        subprocess.run(["rm", temp_file])
+
+    stats_file_list = [global_args.fq1.replace('_R1.fq.gz', f"_SPLIT_{i}_couplet.yaml") for i in range(1, split_file_length+1)]
+    
+    postprocess_stats(stats_file_list, None, global_args.out_dir, global_args.fq1.split('/')[-1].replace('_R1.fq.gz', ''))
+    
+    # remove all split files
+    subprocess.run(f"rm {global_args.fq1.replace('_R1.fq.gz', '_SPLIT_*')}", shell=True)
+    
+def run_couplet(args):
+    print("Running couplet on " + args.fq1 + " and " + args.fq2)
     # Setup logging
     log_output_file = get_base_name(args) + "_couplet.log"
     logging.basicConfig(
         filename=log_output_file,
         format="%(asctime)-15s %(filename)s:%(lineno)d %(message)s",
+        force=True,
     )
     LOGGER = logging.getLogger("root")
     LOGGER.setLevel(logging.INFO)
