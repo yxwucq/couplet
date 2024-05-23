@@ -277,7 +277,7 @@ def resolve_reads(
         resolution_tag = f"\tXR:i:{resolution_tag}"
 
     # Add a base modification tag
-    base_mod_tag = compute_base_mod_tag(genomic_seq, epigenomic_seq, modifications)
+    base_mod_tag = compute_base_mod_tag(genomic_seq, epigenomic_seq, modifications, base_rule)
 
     # Export original quality scores if requested
     if orig_quals_in_sam_tag is True:
@@ -306,7 +306,7 @@ def resolve_reads(
     return result
 
 
-def compute_base_mod_tag(genomic_seq, epigenomic_seq, modifications):
+def compute_base_mod_tag(genomic_seq, epigenomic_seq, modifications, base_rule):
 
     """Computes a SAM tag for base modifications.
 
@@ -329,12 +329,26 @@ def compute_base_mod_tag(genomic_seq, epigenomic_seq, modifications):
         modifications  : A dictionary of modifications. These are of the form:
                          { "epigenomic code": [ "genomic base", "SAM code" ] } e.g.
                          { "PQ": [ "C", "m" ], "PG": [ "C", "h"] }
+        base_rule      : A dictionary mapping pairs of bases to the resolved
 
     Returns:
         A tag with base modification information.
     """
 
-    tag = "\tMM:Z:"
+    reversed_base_rule = {v: k for k, v in base_rule.items()}
+
+    # add raw base of N to tag 
+    tag = f"\tRAWN:"
+    for epi_code in epigenomic_seq:
+        if epi_code.isnumeric() or epi_code == 'n':
+            tag += f"{''.join(reversed_base_rule[('N', epi_code)])}"
+            tag += ','
+    
+    # remove trailing comma
+    tag = tag[:-1]
+    tag += ";"
+
+    tag += "\tMM:Z:"
 
     # Loop over modifications
     for key, values in modifications.items():
