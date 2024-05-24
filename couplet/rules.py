@@ -36,6 +36,7 @@ five_bp_modifications = {"P": ["C", "mh"]}
 # TC for Unmethylated
 # GA for Unmethylated on the reverse strand
 
+# New six_bp_rule for RCA protocol
 six_bp_rule = {
     ("A", "A"): ("A", "A"),
     ("A", "C"): ("N", "0"),
@@ -54,6 +55,26 @@ six_bp_rule = {
     ("T", "G"): ("N", "9"),
     ("T", "T"): ("T", "T"),
 }
+
+# Original six_bp_rule for old protocol
+# six_bp_rule = {
+#     ("A", "A"): ("A", "A"),
+#     ("A", "C"): ("N", "0"),
+#     ("A", "G"): ("N", "1"),
+#     ("A", "T"): ("N", "2"),
+#     ("C", "A"): ("N", "3"),
+#     ("C", "C"): ("C", "P"),
+#     ("C", "G"): ("N", "4"),
+#     ("C", "T"): ("N", "5"),
+#     ("G", "A"): ("G", "G"),
+#     ("G", "C"): ("N", "6"),
+#     ("G", "G"): ("G", "Q"),
+#     ("G", "T"): ("N", "7"),
+#     ("T", "A"): ("N", "8"),
+#     ("T", "C"): ("C", "C"),
+#     ("T", "G"): ("N", "9"),
+#     ("T", "T"): ("T", "T"),
+# }
 
 # six_bp_rule = {
 #     ("A", "A"): ("A", "A"),
